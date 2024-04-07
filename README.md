@@ -80,7 +80,7 @@ func example() {
 }
 ```
 
-Let's assume your font has both `size=1` and `size=1.3` base variants. Using the `Scale` function you get quite a variety:
+Let's assume your font has both `size=1` and `size=1.3` base variants. We can squeeze a wide range of font sizes out of it using `Scale`:
 
 * 1 (base size)
 * 1.3 (base size)
