@@ -63,6 +63,8 @@ After you're ready, run the tool:
 
 This will produce a folder called `myfont` containing a Go package. Copy that package to your app's folder and use it as an ordinary package. Or push it as a Go module on GitHub and install it in a proper way.
 
+> Hint: if you want to bundle a font as a module, make sure to install the dependencies like `golang.org/x/image/font` to the font module.
+
 After installing the generated font package, you can instantiate `font.Face` objects:
 
 ```go

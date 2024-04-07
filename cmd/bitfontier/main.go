@@ -24,8 +24,8 @@ func main() {
 		"a comma-separated list of tags to include into a result bundle;\nan empty value includes everything")
 	flag.StringVar(&onMissing, "on-missing", "emptymask",
 		"a missing glyph resolution strategy (`emptymask`, `stub`, or `panic`)")
-	flag.BoolVar(&debug, "debug", false,
-		"whether to enable debug/verbose output")
+	flag.BoolVar(&debug, "v", false,
+		"whether to enable verbose output")
 	flag.Parse()
 
 	switch onMissing {
@@ -48,7 +48,7 @@ func main() {
 
 	if debug {
 		config.DebugPrint = func(message string) {
-			fmt.Fprintf(os.Stderr, "debug: %s\n", message)
+			fmt.Fprintf(os.Stderr, "info: %s\n", message)
 		}
 	}
 

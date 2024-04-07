@@ -7,11 +7,15 @@ import (
 type templateData struct {
 	PkgName string
 
-	Fonts []*sizedBitmapFont
-
-	RuneToIndex []runeAndIndex
+	Fonts        []*sizedBitmapFont
+	RuneMappings []*runeMapping
 
 	OnMissing string
+}
+
+type runeMapping struct {
+	SizeApprox int
+	Slice      []runeAndIndex
 }
 
 type runeAndIndex struct {
@@ -40,7 +44,7 @@ func New{{.ShortSizeTag}}() font.Face {
 	f.MinRune = {{.MinRune}}
 	f.MaxRune = {{.MaxRune}}
 	f.GlyphBitSize = {{.GlyphBitSize}}
-	f.RuneToIndex = runeToIndex[:]
+	f.RuneMapping = size{{.SizeTag}}mapping[:]
 	return f
 }
 {{end}}
@@ -53,11 +57,15 @@ var (
 )
 
 var (
-	runeToIndex = [...]uint16{
-		{{- range .RuneToIndex }}
-		{{.Rune}}: {{.Index}} + 1, // {{printf "%q" .Rune}}
-		{{- end}}	
+	{{- range $.Fonts}}
+	{{- $m := (index $.RuneMappings .Index)}}
+	// len={{len $m.Slice}} size_approx={{$m.SizeApprox}}
+	size{{.SizeTag}}mapping = [...]runeAndIndex{
+		{{- range $m.Slice}}
+			{r: {{.Rune}}, i: {{.Index}} }, // {{printf "%q" .Rune}}
+		{{- end}}
 	}
+	{{end}}
 )
 
 const (

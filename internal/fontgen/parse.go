@@ -24,6 +24,7 @@ type sizedBitmapFont struct {
 	GlyphWidth   int
 	GlyphHeight  int
 	GlyphBitSize int
+	Index        int
 
 	// Fields below are initialized during the font processing phase.
 	MinRune      rune
@@ -42,6 +43,13 @@ type bitmapRune struct {
 	Img   image.Image
 	Tag   string
 	Size  float64
+
+	// This field later is used to re-use the duplicated images.
+	// For runes that have identical images, this index
+	// will point to the rune that should be used as "original".
+	ImgIndex int
+
+	DataIndex int
 }
 
 func (r bitmapRune) String() string {
@@ -76,6 +84,7 @@ func (p *fontParser) Parse() (*bitmapFont, error) {
 		if size == 1.0 {
 			result.Size1 = sized
 		}
+		sized.Index = len(result.Sized)
 		result.Sized = append(result.Sized, sized)
 	}
 
@@ -135,10 +144,11 @@ func (p *fontParser) parseRunes(path, tag string, size float64) ([]bitmapRune, e
 			return nil, fmt.Errorf("decode image: %w", err)
 		}
 		runes = append(runes, bitmapRune{
-			Value: rune(runeValue),
-			Img:   img,
-			Tag:   tag,
-			Size:  size,
+			Value:    rune(runeValue),
+			Img:      img,
+			Tag:      tag,
+			Size:     size,
+			ImgIndex: -1,
 		})
 	}
 

@@ -10,10 +10,9 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
-
-// TODO: re-use textures for images that have identical pixels
 
 type generator struct {
 	config Config
@@ -170,6 +169,12 @@ func (g *generator) validateFont() error {
 
 func (g *generator) processFont() error {
 	for _, sf := range g.font.Sized {
+		sort.Slice(sf.Runes, func(i, j int) bool {
+			return sf.Runes[i].Value < sf.Runes[j].Value
+		})
+	}
+
+	for _, sf := range g.font.Sized {
 		sf.SizeTag = strings.Replace(fmt.Sprintf("%.2f", sf.Size), ".", "_", 1)
 		sf.ShortSizeTag = strings.Replace(fmt.Sprintf("%v", sf.Size), ".", "_", 1)
 	}
@@ -214,6 +219,36 @@ func (g *generator) processFont() error {
 		sf.DotY = dotY
 	}
 
+	imgKey := func(img image.Image) string {
+		var buf strings.Builder
+		bounds := img.Bounds()
+		buf.Grow(bounds.Dx()*bounds.Dy() + bounds.Dy())
+		for y := 0; y < bounds.Dy(); y++ {
+			for x := 0; x < bounds.Dx(); x++ {
+				_, _, _, a := img.At(x, y).RGBA()
+				if a == 0 {
+					buf.WriteByte('0')
+				} else {
+					buf.WriteByte('1')
+				}
+			}
+		}
+		return buf.String()
+	}
+	for _, sf := range g.font.Sized {
+		imgSet := make(map[string]int, len(sf.Runes))
+		for i, r := range sf.Runes {
+			k := imgKey(r.Img)
+			index, ok := imgSet[k]
+			if ok {
+				g.config.DebugPrint(fmt.Sprintf("%s: re-use image from %s", r, sf.Runes[index]))
+				sf.Runes[i].ImgIndex = index
+				continue
+			}
+			imgSet[k] = i
+		}
+	}
+
 	return nil
 }
 
@@ -223,10 +258,26 @@ func (g *generator) createBitmap() error {
 	for _, sf := range g.font.Sized {
 		sf.BitmapFilename = sf.SizeTag + ".data.gz"
 
-		data := make([]byte, len(sf.Runes)*int(sf.GlyphBitSize))
-
-		i := 0
+		numUniqueImages := 0
 		for _, r := range sf.Runes {
+			if r.ImgIndex != -1 {
+				continue
+			}
+			numUniqueImages++
+		}
+		g.config.DebugPrint(fmt.Sprintf("%.2f: %d/%d images are unique", sf.Size, numUniqueImages, len(sf.Runes)))
+
+		numBits := numUniqueImages * int(sf.GlyphBitSize)
+		data := make([]byte, (numBits/8)+1)
+		g.config.DebugPrint(fmt.Sprintf("%.2f: allocated %d bytes", sf.Size, len(data)))
+
+		bitIndex := 0
+		dataIndex := 0
+		for i, r := range sf.Runes {
+			if r.ImgIndex != -1 {
+				// Duplicates do not advance bitIndex/dataIndex.
+				continue
+			}
 			for y := 0; y < sf.GlyphHeight; y++ {
 				for x := 0; x < sf.GlyphWidth; x++ {
 					clr := r.Img.At(x, y)
@@ -234,13 +285,22 @@ func (g *generator) createBitmap() error {
 					if _, _, _, a := clr.RGBA(); a != 0 {
 						v = 1
 					}
-					bytePos := i / 8
-					byteShift := i % 8
+					bytePos := bitIndex / 8
+					byteShift := bitIndex % 8
 					data[bytePos] |= byte(v << byteShift)
-					i++
+					bitIndex++
 				}
 			}
+			sf.Runes[i].DataIndex = dataIndex
+			dataIndex++
 		}
+		for i, r := range sf.Runes {
+			if r.ImgIndex == -1 {
+				continue
+			}
+			sf.Runes[i].DataIndex = sf.Runes[r.ImgIndex].DataIndex
+		}
+		g.config.DebugPrint(fmt.Sprintf("%.2f: filled %d/%d bytes", sf.Size, bitIndex/8, len(data)))
 
 		var compressed bytes.Buffer
 		gzw := gzip.NewWriter(&compressed)
@@ -269,12 +329,26 @@ func (g *generator) createPackage() error {
 		OnMissing: g.config.MissingGlyphAction.String(),
 	}
 
-	// All rune slices have identical length,
-	// so we could use any one of them.
-	for i, r := range g.font.Size1.Runes {
-		data.RuneToIndex = append(data.RuneToIndex, runeAndIndex{
-			Rune:  r.Value,
-			Index: i,
+	// The rune mapping will use a binary search.
+	// Glyph() is the only method that requires this mapping
+	// and its results are usually cached.
+	// Therefore, we can trade some of the execution speed
+	// for a smaller mapping data structure.
+	// Using a LUT or other approach may increase the mapping
+	// speed at the cost of extra memory/code size.
+	//
+	// The exact mapping method should not concern the users.
+	for _, sf := range g.font.Sized {
+		mapping := []runeAndIndex{}
+		for _, r := range sf.Runes {
+			mapping = append(mapping, runeAndIndex{
+				Rune:  r.Value,
+				Index: r.DataIndex,
+			})
+		}
+		data.RuneMappings = append(data.RuneMappings, &runeMapping{
+			Slice:      mapping,
+			SizeApprox: len(mapping) * 8,
 		})
 	}
 
