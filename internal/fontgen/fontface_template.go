@@ -75,7 +75,7 @@ var (
 var (
 	{{- range $.Fonts}}
 	{{- $m := (index $.RuneMappings .Index)}}
-	// len={{len $m.Slice}} size_approx={{$m.SizeApprox}}
+	// len={{len $m.Slice}} sizeApprox={{$m.SizeApprox}}
 	size{{.SizeTag}}mapping = [...]runeAndIndex{
 		{{- range $m.Slice}}
 			{r: {{.Rune}}, i: {{.Index}} }, // {{printf "%q" .Rune}}
