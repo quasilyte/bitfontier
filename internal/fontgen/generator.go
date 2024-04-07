@@ -323,11 +323,23 @@ func (g *generator) createBitmap() error {
 }
 
 func (g *generator) createPackage() error {
-	data := &templateData{
-		PkgName:   g.config.ResultPackage,
-		Fonts:     g.font.Sized,
-		OnMissing: g.config.MissingGlyphAction.String(),
+	maxRune := rune(math.MinInt32)
+	for _, sf := range g.font.Sized {
+		maxRune = max(maxRune, sf.MaxRune)
 	}
+
+	data := &templateData{
+		PkgName:     g.config.ResultPackage,
+		Fonts:       g.font.Sized,
+		OnMissing:   g.config.MissingGlyphAction.String(),
+		CompactRune: maxRune < math.MaxUint16,
+	}
+	mappingElemSize := 8
+	if data.CompactRune {
+		mappingElemSize = 4
+	}
+
+	g.config.DebugPrint(fmt.Sprintf("compactRune=%v maxRune=%v", data.CompactRune, maxRune))
 
 	// The rune mapping will use a binary search.
 	// Glyph() is the only method that requires this mapping
@@ -348,7 +360,7 @@ func (g *generator) createPackage() error {
 		}
 		data.RuneMappings = append(data.RuneMappings, &runeMapping{
 			Slice:      mapping,
-			SizeApprox: len(mapping) * 8,
+			SizeApprox: len(mapping) * mappingElemSize,
 		})
 	}
 

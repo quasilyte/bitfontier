@@ -22,11 +22,6 @@ type bitmapFont struct {
 	DotY         fixed.Int26_6
 }
 
-type runeAndIndex struct {
-	r rune
-	i uint32
-}
-
 func newBitmapFont(img *bitmapImage, dotX, dotY int) *bitmapFont {
 	return &bitmapFont{
 		img:         img,
@@ -126,14 +121,16 @@ func (f *bitmapFont) getRuneDataIndex(r rune) (uint, bool) {
 	for i < j {
 		h := int(uint(i+j) >> 1)
 		v := slice[h]
-		if v.r < r {
+		// The explicit rune conversion is necessary here.
+		// v.r could be uint16 when small rune optimization is in order.
+		if rune(v.r) < r {
 			i = h + 1
 		} else {
 			j = h
 		}
 	}
 
-	if i < len(slice) && slice[i].r == r {
+	if i < len(slice) && rune(slice[i].r) == r {
 		return uint(slice[i].i), true
 	}
 

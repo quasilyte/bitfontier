@@ -7,3 +7,8 @@ package fontimpl
 const (
 	onMissing = "empty"
 )
+
+type runeAndIndex struct {
+	r rune
+	i uint32
+}

@@ -10,6 +10,8 @@ type templateData struct {
 	Fonts        []*sizedBitmapFont
 	RuneMappings []*runeMapping
 
+	CompactRune bool
+
 	OnMissing string
 }
 
@@ -31,6 +33,20 @@ import (
 	"golang.org/x/image/font"
 	_ "embed"
 )
+
+{{ if $.CompactRune }}
+// runeAndIndex is a compact version for fonts with low max rune bound.
+// Its size is 4 bytes instead of 8.
+type runeAndIndex struct {
+	r uint16
+	i uint16
+}
+{{ else }}
+type runeAndIndex struct {
+	r rune // int32
+	i uint32
+}
+{{ end }}
 
 {{- range $.Fonts}}
 // New{{.ShortSizeTag}} allocates a font of size={{.Size}}.
