@@ -95,6 +95,12 @@ func (g *generator) validateFont() error {
 		return fmt.Errorf("can't find size=1 images")
 	}
 
+	if g.config.MissingGlyphAction == StubOnMissingGlyph {
+		for _, sf := range g.font.Sized {
+			sf.NeedsStub = true
+		}
+	}
+
 	for _, sf := range g.font.Sized {
 		set := map[rune]string{}
 		for i, r := range sf.Runes {
@@ -123,11 +129,7 @@ func (g *generator) validateFont() error {
 	}
 
 	for _, sf := range g.font.Sized {
-		if sf == g.font.Size1 {
-			continue
-		}
-
-		placeholder := image.NewNRGBA(image.Rectangle{
+		sf.StubImage = image.NewNRGBA(image.Rectangle{
 			Max: image.Pt(sf.GlyphWidth, sf.GlyphHeight),
 		})
 		for y := 0; y < sf.GlyphHeight; y++ {
@@ -138,8 +140,12 @@ func (g *generator) validateFont() error {
 				if y == 0 || y == sf.GlyphHeight-1 {
 					continue
 				}
-				placeholder.Set(x, y, color.NRGBA{A: 0xff})
+				sf.StubImage.Set(x, y, color.NRGBA{A: 0xff})
 			}
+		}
+
+		if sf == g.font.Size1 {
+			continue
 		}
 
 		runes := map[rune]struct{}{}
@@ -152,11 +158,13 @@ func (g *generator) validateFont() error {
 		}
 		for r, tag := range size1runes {
 			if _, ok := runes[r]; !ok {
+				sf.NeedsStub = true
 				br := bitmapRune{
-					Value: r,
-					Img:   placeholder,
-					Tag:   tag,
-					Size:  sf.Size,
+					Value:    r,
+					IsStub:   true,
+					Tag:      tag,
+					Size:     sf.Size,
+					ImgIndex: -1,
 				}
 				sf.Runes = append(sf.Runes, br)
 				g.warnings = append(g.warnings, fmt.Sprintf("%s: using a placeholder image", br))
@@ -191,6 +199,9 @@ func (g *generator) processFont() error {
 	for _, sf := range g.font.Sized {
 		minX := math.MaxInt
 		for _, r := range sf.Runes {
+			if r.IsStub {
+				continue
+			}
 			w := r.Img.Bounds().Dx()
 			h := r.Img.Bounds().Dy()
 			for y := 0; y < h; y++ {
@@ -238,6 +249,9 @@ func (g *generator) processFont() error {
 	for _, sf := range g.font.Sized {
 		imgSet := make(map[string]int, len(sf.Runes))
 		for i, r := range sf.Runes {
+			if r.IsStub {
+				continue
+			}
 			k := imgKey(r.Img)
 			index, ok := imgSet[k]
 			if ok {
@@ -260,11 +274,18 @@ func (g *generator) createBitmap() error {
 
 		numUniqueImages := 0
 		for _, r := range sf.Runes {
+			if r.IsStub {
+				continue
+			}
 			if r.ImgIndex != -1 {
 				continue
 			}
 			numUniqueImages++
 		}
+		if sf.NeedsStub {
+			numUniqueImages++
+		}
+		g.config.DebugPrint(fmt.Sprintf("%.2f: needsStub=%v", sf.Size, sf.NeedsStub))
 		g.config.DebugPrint(fmt.Sprintf("%.2f: %d/%d images are unique", sf.Size, numUniqueImages, len(sf.Runes)))
 
 		numBits := numUniqueImages * int(sf.GlyphBitSize)
@@ -273,14 +294,10 @@ func (g *generator) createBitmap() error {
 
 		bitIndex := 0
 		dataIndex := 0
-		for i, r := range sf.Runes {
-			if r.ImgIndex != -1 {
-				// Duplicates do not advance bitIndex/dataIndex.
-				continue
-			}
+		encodeImage := func(img image.Image) {
 			for y := 0; y < sf.GlyphHeight; y++ {
 				for x := 0; x < sf.GlyphWidth; x++ {
-					clr := r.Img.At(x, y)
+					clr := img.At(x, y)
 					v := 0
 					if _, _, _, a := clr.RGBA(); a != 0 {
 						v = 1
@@ -291,14 +308,39 @@ func (g *generator) createBitmap() error {
 					bitIndex++
 				}
 			}
+		}
+		// First add explicitly defined rune images.
+		for i, r := range sf.Runes {
+			if r.ImgIndex != -1 {
+				// Duplicates do not advance bitIndex/dataIndex.
+				continue
+			}
+			if r.IsStub {
+				continue
+			}
+			encodeImage(r.Img)
 			sf.Runes[i].DataIndex = dataIndex
 			dataIndex++
 		}
+		// Then bind the duplicated rune images data indices.
 		for i, r := range sf.Runes {
 			if r.ImgIndex == -1 {
 				continue
 			}
 			sf.Runes[i].DataIndex = sf.Runes[r.ImgIndex].DataIndex
+		}
+		// If stub is needed, add it as a last data entry.
+		if sf.NeedsStub {
+			encodeImage(sf.StubImage)
+			sf.StubDataIndex = dataIndex
+			dataIndex++
+		}
+		// Bind all stub runes to that stub data index.
+		for i, r := range sf.Runes {
+			if !r.IsStub {
+				continue
+			}
+			sf.Runes[i].DataIndex = sf.StubDataIndex
 		}
 		g.config.DebugPrint(fmt.Sprintf("%.2f: filled %d/%d bytes", sf.Size, bitIndex/8, len(data)))
 

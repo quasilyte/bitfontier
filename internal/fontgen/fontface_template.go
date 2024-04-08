@@ -56,7 +56,7 @@ type runeAndIndex struct {
 func New{{.ShortSizeTag}}() font.Face {
 	data := uncompress(size{{.SizeTag}}data)
 	img := newBitmapImage(data, {{.GlyphWidth}}, {{.GlyphHeight}})
-	f := newBitmapFont(img, {{.DotX}}, {{.DotY}})
+	f := newBitmapFont({{.Index}}, img, {{.DotX}}, {{.DotY}})
 	f.MinRune = {{.MinRune}}
 	f.MaxRune = {{.MaxRune}}
 	f.GlyphBitSize = {{.GlyphBitSize}}
@@ -72,6 +72,21 @@ var (
 	{{end}}
 )
 
+const (
+	onMissing = "{{.OnMissing}}"
+)
+
+func getStubImageIndex(id int) uint {
+	switch id {
+	{{- range $.Fonts }}
+	case {{.Index}}: // size={{.SizeTag}}
+		return {{.StubDataIndex}}
+	{{- end }}
+	default:
+		panic("unreachable")
+	}
+}
+
 var (
 	{{- range $.Fonts}}
 	{{- $m := (index $.RuneMappings .Index)}}
@@ -82,9 +97,5 @@ var (
 		{{- end}}
 	}
 	{{end}}
-)
-
-const (
-	onMissing = "{{.OnMissing}}"
 )
 `))

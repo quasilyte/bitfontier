@@ -32,7 +32,7 @@ const (
 func (g MissingGlyphAction) String() string {
 	switch g {
 	case EmptyMaskOnMissingGlyph:
-		return "	emptymask"
+		return "emptymask"
 	case StubOnMissingGlyph:
 		return "stub"
 	case PanicOnMissingGlyph:

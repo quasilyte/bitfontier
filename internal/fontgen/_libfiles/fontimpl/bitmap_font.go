@@ -13,6 +13,7 @@ type bitmapFont struct {
 	img         *bitmapImage
 	glyphWidth  int
 	glyphHeight int
+	id          int
 
 	MinRune      rune
 	MaxRune      rune
@@ -22,8 +23,9 @@ type bitmapFont struct {
 	DotY         fixed.Int26_6
 }
 
-func newBitmapFont(img *bitmapImage, dotX, dotY int) *bitmapFont {
+func newBitmapFont(id int, img *bitmapImage, dotX, dotY int) *bitmapFont {
 	return &bitmapFont{
+		id:          id,
 		img:         img,
 		glyphWidth:  int(img.width),
 		glyphHeight: int(img.height),
@@ -57,7 +59,7 @@ func (f *bitmapFont) glyph(dot fixed.Point26_6, r rune) (dr image.Rectangle, mas
 		case "emptymask":
 			return dr, mask, advance, false
 		case "stub":
-			// TODO
+			index = getStubImageIndex(f.id)
 		case "panic":
 			panic(fmt.Sprintf("requesting an undefined rune %v (%q)", r, r))
 		}

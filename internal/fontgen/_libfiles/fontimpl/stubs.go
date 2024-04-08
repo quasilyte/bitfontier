@@ -12,3 +12,7 @@ type runeAndIndex struct {
 	r rune
 	i uint32
 }
+
+func getStubImageIndex(fontID int) uint {
+	return 0
+}

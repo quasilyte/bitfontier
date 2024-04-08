@@ -33,9 +33,13 @@ type sizedBitmapFont struct {
 	DotY         int
 	ShortSizeTag string
 	SizeTag      string
+	StubImage    *image.NRGBA
+	NeedsStub    bool
 
 	// Fields below are initialized during bitmap generation phase.
 	BitmapFilename string
+
+	StubDataIndex int
 }
 
 type bitmapRune struct {
@@ -43,6 +47,8 @@ type bitmapRune struct {
 	Img   image.Image
 	Tag   string
 	Size  float64
+
+	IsStub bool
 
 	// This field later is used to re-use the duplicated images.
 	// For runes that have identical images, this index
