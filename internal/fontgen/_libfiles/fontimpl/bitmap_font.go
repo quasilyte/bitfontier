@@ -54,7 +54,7 @@ func (f *bitmapFont) glyph(dot fixed.Point26_6, r rune) (dr image.Rectangle, mas
 		// onMissing is a const, so the compiler should eliminate
 		// all checks here and keep the right case only.
 		switch onMissing {
-		case "empty":
+		case "emptymask":
 			return dr, mask, advance, false
 		case "stub":
 			// TODO

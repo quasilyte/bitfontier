@@ -5,7 +5,7 @@ package fontimpl
 // Instead, the generator would inject the appropriate values on its own.
 
 const (
-	onMissing = "empty"
+	onMissing = "emptymask"
 )
 
 type runeAndIndex struct {
