@@ -2,6 +2,7 @@ package fontgen
 
 import (
 	"embed"
+	"time"
 )
 
 //go:embed all:_libfiles
@@ -44,6 +45,22 @@ func (g MissingGlyphAction) String() string {
 
 type GenerationResult struct {
 	Warnings []string
+
+	FontInfo FontInfo
+}
+
+type FontInfo struct {
+	Runes []RuneInfo
+
+	Sizes []float64
+
+	Date time.Time
+}
+
+type RuneInfo struct {
+	Value       rune
+	StringValue string
+	Tag         string
 }
 
 func Generate(config Config) (GenerationResult, error) {

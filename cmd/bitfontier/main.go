@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
+	"text/template"
 
 	"github.com/quasilyte/bitfontier"
 )
@@ -13,6 +16,7 @@ func main() {
 	var tagString string
 	var onMissing string
 	var debug bool
+	var generateDocs bool
 	var config bitfontier.Config
 	flag.StringVar(&config.DataDir, "data-dir", "_data",
 		"a path to a folder that contains font images")
@@ -26,6 +30,8 @@ func main() {
 		"a missing glyph resolution strategy (`emptymask`, `stub`, or `panic`)")
 	flag.BoolVar(&debug, "v", false,
 		"whether to enable verbose output")
+	flag.BoolVar(&generateDocs, "generate-info", false,
+		"whether to generate an additional fontinfo.md file with font stats")
 	flag.Parse()
 
 	switch onMissing {
@@ -59,4 +65,55 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("error: %v", err))
 	}
+
+	if generateDocs {
+		makeDoc(config, genResult)
+	}
 }
+
+func makeDoc(config bitfontier.Config, genResult bitfontier.GenerationResult) {
+	var sizes []string
+	for _, s := range genResult.FontInfo.Sizes {
+		sizes = append(sizes, fmt.Sprintf("`%v`", s))
+	}
+	d := genResult.FontInfo.Date
+	dateString := fmt.Sprintf("%d of %s %d", d.Day(), d.Month(), d.Year())
+
+	data := struct {
+		FontName    string
+		Result      bitfontier.GenerationResult
+		SizesString string
+		DateString  string
+	}{
+		FontName:    config.ResultPackage,
+		Result:      genResult,
+		SizesString: strings.Join(sizes, ", "),
+		DateString:  dateString,
+	}
+
+	var buf bytes.Buffer
+	if err := docTemplate.Execute(&buf, data); err != nil {
+		panic(err)
+	}
+	filename := filepath.Join(config.OutDir, "fontinfo.md")
+	if err := os.WriteFile(filename, buf.Bytes(), 0o644); err != nil {
+		panic(err)
+	}
+}
+
+var docTemplate = template.Must(template.New("fontinfo").Parse(`# {{.FontName}} Bitmap Font
+
+## Overview
+
+* Runes: {{len $.Result.FontInfo.Runes}}
+* Sizes: {{$.SizesString}}
+* Generation date: {{$.DateString}}
+
+## UTF-8 Runes
+
+| Rune | Code | Tag |
+|---|---|---|
+{{- range $.Result.FontInfo.Runes }}
+| {{.StringValue}} | {{.Value}} | {{.Tag}} |
+{{- end }}
+`))

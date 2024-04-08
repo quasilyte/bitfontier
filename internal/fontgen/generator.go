@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 type generator struct {
@@ -19,6 +20,8 @@ type generator struct {
 
 	font     *bitmapFont
 	warnings []string
+
+	info FontInfo
 }
 
 func newGenerator(config Config) *generator {
@@ -42,6 +45,7 @@ func (g *generator) Generate() (GenerationResult, error) {
 		{"create bitmap", g.createBitmap},
 		{"create package", g.createPackage},
 		{"copy lib files", g.copyLibFiles},
+		{"generate info", g.generateInfo},
 	}
 	for _, s := range steps {
 		if err := s.fn(); err != nil {
@@ -50,6 +54,7 @@ func (g *generator) Generate() (GenerationResult, error) {
 	}
 
 	result.Warnings = g.warnings
+	result.FontInfo = g.info
 	return result, nil
 }
 
@@ -443,6 +448,24 @@ func (g *generator) copyLibFiles() error {
 			return err
 		}
 	}
+
+	return nil
+}
+
+func (g *generator) generateInfo() error {
+	for _, r := range g.font.Size1.Runes {
+		g.info.Runes = append(g.info.Runes, RuneInfo{
+			Value:       r.Value,
+			StringValue: string(r.Value),
+			Tag:         r.Tag,
+		})
+	}
+
+	for _, sf := range g.font.Sized {
+		g.info.Sizes = append(g.info.Sizes, sf.Size)
+	}
+
+	g.info.Date = time.Now()
 
 	return nil
 }
