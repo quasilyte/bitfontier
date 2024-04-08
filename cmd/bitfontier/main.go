@@ -87,15 +87,17 @@ func makeDoc(config bitfontier.Config, genResult bitfontier.GenerationResult) {
 	dateString := fmt.Sprintf("%d of %s %d", d.Day(), d.Month(), d.Year())
 
 	data := struct {
-		FontName    string
-		Result      bitfontier.GenerationResult
-		SizesString string
-		DateString  string
+		FontName              string
+		Result                bitfontier.GenerationResult
+		SizesString           string
+		DateString            string
+		MissingRuneResolution string
 	}{
-		FontName:    config.ResultPackage,
-		Result:      genResult,
-		SizesString: strings.Join(sizes, ", "),
-		DateString:  dateString,
+		FontName:              config.ResultPackage,
+		Result:                genResult,
+		SizesString:           strings.Join(sizes, ", "),
+		DateString:            dateString,
+		MissingRuneResolution: config.MissingGlyphAction.String(),
 	}
 
 	var buf bytes.Buffer
@@ -115,6 +117,7 @@ var docTemplate = template.Must(template.New("fontinfo").Parse(`# {{.FontName}} 
 * Runes: {{len $.Result.FontInfo.Runes}}
 * Sizes: {{$.SizesString}}
 * Generation date: {{$.DateString}}
+* Missing rune resolution: {{$.MissingRuneResolution}}
 
 ## UTF-8 Runes
 
