@@ -76,6 +76,13 @@ func makeDoc(config bitfontier.Config, genResult bitfontier.GenerationResult) {
 	for _, s := range genResult.FontInfo.Sizes {
 		sizes = append(sizes, fmt.Sprintf("`%v`", s))
 	}
+	for i, r := range genResult.FontInfo.Runes {
+		switch r.Value {
+		case '#', '\\', '|', '!', '.', '-', '+', '*', '(', ')', '{', '}', '_':
+			// Escape markdown special symbols.
+			genResult.FontInfo.Runes[i].StringValue = "\\" + r.StringValue
+		}
+	}
 	d := genResult.FontInfo.Date
 	dateString := fmt.Sprintf("%d of %s %d", d.Day(), d.Month(), d.Year())
 
