@@ -29,6 +29,12 @@ You can basically create a bitmap font for your Go app by using just this tool a
 $ go install github.com/quasilyte/bitfontier/cmd/bitfontier@latest
 ```
 
+## Fonts
+
+Ready-to-use fonts created by bitfontier:
+
+* [bitsweetfont](https://github.com/quasilyte/bitsweetfont)
+
 ## Usage
 
 First, you need to create a set of images that would form a bitmap font. The font can have multiple base sizes and support multiple languages. We'll start with a single-size English set of images.
