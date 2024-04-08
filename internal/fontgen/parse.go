@@ -20,7 +20,7 @@ type bitmapFont struct {
 type sizedBitmapFont struct {
 	Size         float64
 	Runes        []bitmapRune
-	Dot          *bitmapRune
+	DotImage     image.Image
 	GlyphWidth   int
 	GlyphHeight  int
 	GlyphBitSize int

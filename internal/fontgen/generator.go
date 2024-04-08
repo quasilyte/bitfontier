@@ -103,9 +103,9 @@ func (g *generator) validateFont() error {
 
 	for _, sf := range g.font.Sized {
 		set := map[rune]string{}
-		for i, r := range sf.Runes {
+		for _, r := range sf.Runes {
 			if r.Value == '.' {
-				sf.Dot = &sf.Runes[i]
+				sf.DotImage = r.Img
 			}
 			b := r.Img.Bounds()
 			if b.Dx() != sf.GlyphWidth || b.Dy() != sf.GlyphHeight {
@@ -117,7 +117,7 @@ func (g *generator) validateFont() error {
 			set[r.Value] = r.Tag
 		}
 
-		if sf.Dot == nil {
+		if sf.DotImage == nil {
 			return fmt.Errorf("%.2f: missing a period `.` symbol (charcode=46)", sf.Size)
 		}
 	}
@@ -218,7 +218,7 @@ func (g *generator) processFont() error {
 	FindDotY:
 		for y := sf.GlyphHeight - 1; y >= 0; y-- {
 			for x := 0; x < sf.GlyphWidth; x++ {
-				clr := sf.Dot.Img.At(x, y)
+				clr := sf.DotImage.At(x, y)
 				if _, _, _, a := clr.RGBA(); a != 0 {
 					dotY = y
 					break FindDotY
