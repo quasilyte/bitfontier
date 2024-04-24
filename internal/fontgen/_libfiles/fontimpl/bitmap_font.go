@@ -15,6 +15,9 @@ type bitmapFont struct {
 	glyphHeight int
 	id          int
 
+	lastGlyphRune  rune
+	lastGlyphIndex int
+
 	MinRune      rune
 	MaxRune      rune
 	RuneMapping  []runeAndIndex
@@ -116,9 +119,31 @@ func (f *bitmapFont) Metrics() font.Metrics {
 }
 
 func (f *bitmapFont) getRuneDataIndex(r rune) (uint, bool) {
+	slice := f.RuneMapping
+
+	// A heuristic search that depends on the previous binary search result.
+	// Since most of the time we're looking for a rune from the
+	// same language, these runes might be very close to each other.
+	// If there are no gaps in between these two runes, we
+	// can find the target rune data index with a simple calculation.
+	//
+	// If there is a gap, this strategy will fail and we'll proceed
+	// to the binary search below.
+	//
+	// When it works, it gives 20-25% Glyph() speedup
+	// and turns the lookup into O(1).
+	{
+		delta := int(r) - int(f.lastGlyphRune)
+		index := uint(f.lastGlyphIndex + delta)
+		if index < uint(len(slice)) {
+			if rune(slice[index].r) == r {
+				return uint(slice[index].i), true
+			}
+		}
+	}
+
 	// This is an inlined sort.Search specialized for our slice.
 
-	slice := f.RuneMapping
 	i, j := 0, len(slice)
 	for i < j {
 		h := int(uint(i+j) >> 1)
@@ -133,6 +158,9 @@ func (f *bitmapFont) getRuneDataIndex(r rune) (uint, bool) {
 	}
 
 	if i < len(slice) && rune(slice[i].r) == r {
+		// Save the results for the heuristic search above.
+		f.lastGlyphRune = r
+		f.lastGlyphIndex = i
 		return uint(slice[i].i), true
 	}
 
