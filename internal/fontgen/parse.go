@@ -21,6 +21,8 @@ type sizedBitmapFont struct {
 	Size         float64
 	Runes        []bitmapRune
 	DotImage     image.Image
+	LcaseXImage  image.Image
+	UcaseAImage  image.Image
 	GlyphWidth   int
 	GlyphHeight  int
 	GlyphBitSize int
@@ -31,6 +33,8 @@ type sizedBitmapFont struct {
 	MaxRune      rune
 	DotX         int
 	DotY         int
+	CapHeight    int
+	XHeight      int
 	ShortSizeTag string
 	SizeTag      string
 	StubImage    *image.NRGBA

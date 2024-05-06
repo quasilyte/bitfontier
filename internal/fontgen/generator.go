@@ -109,8 +109,13 @@ func (g *generator) validateFont() error {
 	for _, sf := range g.font.Sized {
 		set := map[rune]string{}
 		for _, r := range sf.Runes {
-			if r.Value == '.' {
+			switch r.Value {
+			case '.':
 				sf.DotImage = r.Img
+			case 'x':
+				sf.LcaseXImage = r.Img
+			case 'A':
+				sf.UcaseAImage = r.Img
 			}
 			b := r.Img.Bounds()
 			if b.Dx() != sf.GlyphWidth || b.Dy() != sf.GlyphHeight {
@@ -190,6 +195,13 @@ func (g *generator) processFont() error {
 	for _, sf := range g.font.Sized {
 		sf.SizeTag = strings.Replace(fmt.Sprintf("%.2f", sf.Size), ".", "_", 1)
 		sf.ShortSizeTag = strings.Replace(fmt.Sprintf("%v", sf.Size), ".", "_", 1)
+
+		if sf.UcaseAImage != nil {
+			_, sf.CapHeight = measureLetter(sf.UcaseAImage)
+		}
+		if sf.LcaseXImage != nil {
+			_, sf.XHeight = measureLetter(sf.LcaseXImage)
+		}
 	}
 
 	for _, sf := range g.font.Sized {

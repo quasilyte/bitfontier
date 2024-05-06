@@ -22,6 +22,8 @@ type bitmapFont struct {
 	MaxRune      rune
 	RuneMapping  []runeAndIndex
 	GlyphBitSize uint
+	CapHeight    int
+	XHeight      int
 	DotX         fixed.Int26_6
 	DotY         fixed.Int26_6
 }
@@ -111,10 +113,13 @@ func (f *bitmapFont) Kern(r0, r1 rune) fixed.Int26_6 {
 }
 
 func (f *bitmapFont) Metrics() font.Metrics {
+	// TODO: make line height (Height) configurable?
 	return font.Metrics{
-		Height:  fixed.I(f.glyphHeight),
-		Ascent:  f.DotY,
-		Descent: fixed.I(f.glyphHeight) - f.DotY,
+		Height:    fixed.I(f.glyphHeight),
+		XHeight:   fixed.I(f.XHeight),
+		CapHeight: fixed.I(f.CapHeight),
+		Ascent:    f.DotY,
+		Descent:   fixed.I(f.glyphHeight) - f.DotY,
 	}
 }
 

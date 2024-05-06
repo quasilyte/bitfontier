@@ -59,6 +59,8 @@ func New{{.ShortSizeTag}}() font.Face {
 	f := newBitmapFont({{.Index}}, img, {{.DotX}}, {{.DotY}})
 	f.MinRune = {{.MinRune}}
 	f.MaxRune = {{.MaxRune}}
+	f.XHeight = {{.XHeight}}
+	f.CapHeight = {{.CapHeight}}
 	f.GlyphBitSize = {{.GlyphBitSize}}
 	f.RuneMapping = size{{.SizeTag}}mapping[:]
 	return f
